@@ -2,29 +2,30 @@ package com.allianzGlobal.assignment.service;
 
 import com.allianzGlobal.assignment.model.Student;
 import com.allianzGlobal.assignment.repository.StudentRepository;
+import com.mongodb.client.DistinctIterable;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoCursor;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.stereotype.Service;
 
-
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 @Service
 public class StudentServiceImpl implements IStudentService {
 
-    @SuppressWarnings("SpringJavaInjectionPointsAutowiringInspection")
     @Autowired
     StudentRepository studentRepository;
+
+    @Autowired
+    private MongoTemplate mongoTemplate;
 
     @Override
     public String addStudent(Student student) {
         studentRepository.save(student);
         return "Student Roll No : " + student.getRollNo()+ " Name : " +student.getStudentName()+ " is saved successfully.";
-    }
-
-    @Override
-    public List<Student> getAllStudent() {
-        return studentRepository.findAll();
     }
 
     @Override
@@ -56,10 +57,24 @@ public class StudentServiceImpl implements IStudentService {
         return studentRepository.save(_student);
     }
 
-
     @Override
-    public List<Student> getAllStudentByLowMarks() {
-       return  studentRepository.getAllStudentByLowMarks();
+    public List<Student> findByMarksLessThan(int marks) {
+       return  studentRepository.findByMarksLessThan(marks);
     }
 
-  }
+    @Override
+    public List<String> findDistinctStudentName() {
+       List<String> studentNameList = new ArrayList<>();
+       MongoCollection mongoCollection = mongoTemplate.getCollection("studentDetails");
+            DistinctIterable distinctIterable = mongoCollection.distinct("studentName",String.class);
+            MongoCursor cursor = distinctIterable.iterator();
+            while (cursor.hasNext()) {
+                String student = (String)cursor.next();
+                studentNameList.add(student);
+            }
+            return studentNameList;
+        }
+
+    }
+
+
