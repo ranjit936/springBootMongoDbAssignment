@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.allianzGlobal.assignment.AssignmentApplication;
+import com.allianzGlobal.assignment.service.IStudentService;
 import com.mongodb.client.DistinctIterable;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -14,6 +15,7 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Component;
 import org.springframework.web.bind.annotation.*;
 import com.allianzGlobal.assignment.model.Student;
 import com.allianzGlobal.assignment.repository.StudentRepository;
@@ -23,31 +25,32 @@ import org.bson.types.ObjectId;
 @RestController
 @RequestMapping("/api")
 public class StudentController {
-    private static final Logger logger = LogManager.getLogger(AssignmentApplication.class);
 
+    private static final Logger logger = LogManager.getLogger(AssignmentApplication.class);
+    @Autowired
+    private IStudentService studentService;
     @Autowired
     private MongoTemplate mongoTemplate;
     @Autowired
     StudentRepository studentRepository;
 
+
     @PostMapping("/students")
-    public ResponseEntity<Student> addStudent(@RequestBody Student student) {
+    public ResponseEntity<String> addStudent(@RequestBody Student student) {
         logger.info("Entered addStudent Method ");
         try {
-            Student save = this.studentRepository.save(student);
-            return new ResponseEntity<>(save, HttpStatus.CREATED);
+            String savedMessage =  studentService.addStudent(student);
+            return new ResponseEntity<>(savedMessage, HttpStatus.CREATED);
         } catch (Exception e) {
             return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
-
     }
 
 
-    @GetMapping("/students/{rollNo}")
-    public ResponseEntity<Student> getStudentById(@PathVariable("rollNo") int rollNo) {
+    @GetMapping("/students/{studentId}")
+    public ResponseEntity<Student> getStudentById(@PathVariable("studentId") int studentId) {
         logger.info("Entered getStudentById Method ");
-        Optional<Student> studentData = this.studentRepository.findById(rollNo);
-
+        Optional<Student> studentData =  studentService.getStudentById(studentId);
         if (studentData.isPresent()) {
             return new ResponseEntity<>(studentData.get(), HttpStatus.OK);
         } else {
@@ -55,56 +58,49 @@ public class StudentController {
         }
     }
 
-    @DeleteMapping("/students/{rollNo}")
-    public ResponseEntity<HttpStatus> deleteStudentDetailsById(@PathVariable("rollNo") int rollNo) {
+    @DeleteMapping("/students/{studentId}")
+    public ResponseEntity<String> deleteStudentDetailsById(@PathVariable("studentId") int studentId) {
         logger.info("Entered deleteStudentDetailsById Method ");
         try {
-            this.studentRepository.deleteById(rollNo);
-            return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+            String messageOnDelete = studentService.deleteStudentById(studentId);
+            return new ResponseEntity<>(messageOnDelete, HttpStatus.NO_CONTENT);
         } catch (Exception e) {
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
-    @PutMapping("/students/{rollNo}")
-    public ResponseEntity<Student> updateStudent(@PathVariable("rollNo") int rollNo, @RequestBody Student student) {
+    @PutMapping("/students/{studentId}")
+    public ResponseEntity<Student> updateStudent(@PathVariable("studentId") int studentId, @RequestBody Student student) {
         logger.info("Entered updateStudent Method ");
-        Optional<Student> studentData = this.studentRepository.findById(rollNo);
-
-        if (studentData.isPresent()) {
-            Student _student = studentData.get();
-            _student.setStudentName(student.getStudentName());
-            _student.setGender(student.getGender());
-            _student.setRollNo(student.getRollNo());
-            _student.setMarks(student.getMarks());
-            return new ResponseEntity<>(this.studentRepository.save(_student), HttpStatus.OK);
-        } else {
-            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        try{
+            Student updatedStudentData =  studentService.updateStudentById(studentId, student);
+            return new ResponseEntity<>(updatedStudentData , HttpStatus.OK);
+        }catch(Exception e) {
+            return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
         }
     }
 
-
-
-//    Api to get filtered
+//    Custom Api to get filtered result
 
     @GetMapping("/students/marks")
-    List<ObjectId> findStudentByMarks (){
-        Query query = new Query();
-        query.addCriteria(Criteria.where("marks").lt(35));
-       return  mongoTemplate.find(query, ObjectId.class );
-    }
+    List<Student> getAllStudentByLowMarks (){
+     List student =  studentService.getAllStudentByLowMarks();
+     return new ResponseEntity<>(student , HttpStatus.OK).getBody();
+     }
+
+/*
 
     @GetMapping("/students/distinctName")
     DistinctIterable<Student>  findStudentDistinctName() {
         return mongoTemplate.getCollection("studentDetails").distinct("studentName", Student.class);
-      }
+    }
 
     @GetMapping("/students/gender")
     List<Student>  findStudentListByGender() {
         Query query = new Query();
         query.addCriteria(Criteria.where("gender").is("female").andOperator().where("gender").is("male"));
-         return  mongoTemplate.find(query, Student.class);
-       }
+        return  mongoTemplate.find(query, Student.class);
+    }
 
 
     @GetMapping("/students/genderTest")
@@ -124,7 +120,7 @@ public class StudentController {
         result.add(queryResult1);
         result.add(queryResult2);
         return result;
-       }
+    }*/
 
    /* @Query(value = "{ companyType: ?0, companyId: ?1, eventType: ?2, delivered: ?3, " +
                    "$or:[ {requestPayload.sponsorGovernmentId: ?4}, {requestPayload.invoiceNumber: ?5} ]}")*/
@@ -137,4 +133,5 @@ public class StudentController {
                  .build();
          return mergeOperation.getFields("gende");
      } */
+
 }
