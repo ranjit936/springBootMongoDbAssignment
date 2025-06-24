@@ -20,7 +20,6 @@ public class Student {
     private int marks;
     private String subject;
     private String gender;
-    private String address;
     private String country;
 
 }
